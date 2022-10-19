@@ -4,12 +4,11 @@
 \alias{load_ontology}
 \title{Load an ontology}
 \usage{
-load_ontology(path)
+load_ontology(path = NULL)
 }
 \arguments{
 \item{path}{\code{\link[=character]{character(1)}}\cr the path where the ontology to
-load is stored. It can be omitted in case the option "onto_path" has been
-define (see \code{getOption("onto_path")}).}
+load is stored.}
 }
 \value{
 A table of the full ontology (i.e., where attribute and mapping
@@ -19,7 +18,7 @@ tables are joined).
 Load an ontology
 }
 \examples{
-ontoDir <- system.file("extdata", "crops.rds", package = "ontologics")
+# load an already existing ontology
+load_ontology(path = system.file("extdata", "crops.rds", package = "ontologics"))
 
-load_ontology(path = ontoDir)
 }

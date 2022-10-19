@@ -4,25 +4,40 @@
 \alias{get_concept}
 \title{Get a concept in an ontology}
 \usage{
-get_concept(..., exact = TRUE, tree = FALSE, missing = FALSE, path = NULL)
+get_concept(
+  x = NULL,
+  ...,
+  regex = FALSE,
+  tree = FALSE,
+  na.rm = FALSE,
+  mappings = "none",
+  ontology = NULL
+)
 }
 \arguments{
+\item{x}{\code{\link[=character]{character(1)}}\cr a table containing all columns of the
+ontology that shall be filter by the values in those columns.}
+
 \item{...}{combination of column name and value to filter that column by. The
 value to filter by can be provided as regular expression.}
 
-\item{exact}{\code{\link[=logical]{logical(1)}}\cr whether or not the value in
+\item{regex}{\code{\link[=logical]{logical(1)}}\cr whether or not the value in
 \code{...} shall be matched in full, or whether any partial match should be
 returned.}
 
 \item{tree}{\code{\link[=logical]{logical(1)}}\cr whether or not to output the whole
 ontology tree starting from the given search terms.}
 
-\item{missing}{\code{\link[=logical]{logical(1)}}\cr whether or not to give only those
-values that are currently missing from the ontology.}
+\item{na.rm}{\code{\link[=logical]{logical(1)}}\cr whether or not missing concepts are
+omitted or not.}
 
-\item{path}{\code{\link[=character]{character(1)}}\cr the path where the ontology in
-which to search is stored. It can be omitted in case the option "onto_path"
-has been define (see \code{getOption("onto_path")}).}
+\item{mappings}{\code{\link[=character]{character(1)}}\cr the type of mappings within
+which to search for the concepts, possible values are \code{"none"},
+\code{"all"}, \code{"close"}, \code{"broader"}, \code{"narrower"},
+\code{"exact"} or any combination thereof.}
+
+\item{ontology}{\code{\link[=list]{ontology(1)}}\cr either a path where the ontology is
+stored, or an already loaded ontology.}
 }
 \value{
 A table of a subset of the ontology according to the values in
@@ -33,13 +48,19 @@ Get a concept in an ontology
 }
 \examples{
 ontoDir <- system.file("extdata", "crops.rds", package = "ontologics")
+onto <- load_ontology(path = ontoDir)
 
-# exact matches
-get_concept(label_en = "FODDER CROPS", path = ontoDir)
+# exact matches from a loaded ontology ...
+get_concept(x = data.frame(label = "FODDER CROPS"), ontology = onto)
+
+# ... or one stored on the harddisc
+get_concept(x = data.frame(label = "FODDER CROPS"), ontology = ontoDir)
 
 # use regular expressions ...
-get_concept(label_en = "/*crops", exact = FALSE, path = ontoDir)
+get_concept(x = data.frame(label = "/*crops"), regex = TRUE, ontology = onto)
+
+get_concept(x = data.frame(label = "/*crops"), has_broader = ".05", regex = TRUE, ontology = onto)
 
 # get all concepts that are nested into another concept
-get_concept(label_en = "FODDER CROPS", tree = TRUE, path = ontoDir)
+get_concept(x = data.frame(label = "FODDER CROPS"), tree = TRUE, ontology = onto)
 }

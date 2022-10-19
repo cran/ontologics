@@ -6,38 +6,29 @@
 \usage{
 new_concept(
   new,
-  broader,
+  broader = NULL,
+  description = NULL,
   class = NULL,
-  source,
-  overwrite = FALSE,
-  attributes = NULL,
-  path = NULL
+  ontology = NULL
 )
 }
 \arguments{
 \item{new}{\code{\link[=character]{character(.)}}\cr the english label(s) of new
 concepts that shall be included in the ontology.}
 
-\item{broader}{\code{\link[=character]{character(.)}}\cr the english label(s) of already
-harmonised concepts to which the new concept shall be semantically linked
-via a
+\item{broader}{\code{\link[=data.frame]{data.frame(.)}}\cr the english label(s) of
+already harmonised concepts to which the new concept shall be semantically
+linked via a
 \href{https://www.w3.org/TR/skos-reference/#semantic-relations}{skos:broader}
 relation, see Details.}
 
+\item{description}{\code{\link[=character]{character(.)}}\cr a verbatim description of
+the new concept(s).}
+
 \item{class}{\code{\link[=character]{character(.)}}\cr the class(es) of the new labels.}
 
-\item{source}{\code{\link[=character]{character(1)}}\cr any character uniquely
-identifying the source dataset of the new concept (for example
-\emph{Author+Year}).}
-
-\item{overwrite}{\code{\link[=logical]{logical(1)}} whether or not to overwrite already
-existing concepts.}
-
-\item{attributes}{\code{\link[=tibble]{tibble()}}\cr not yet implemented.}
-
-\item{path}{\code{\link[=character]{character(1)}}\cr the path where the ontology in
-which to search is stored. It can be omitted in case the option "onto_path"
-has been define (see \code{getOption("onto_path")}).}
+\item{ontology}{\code{\link[=list]{ontology(1)}}\cr either a path where the ontology is
+stored, or an already loaded ontology.}
 }
 \value{
 returns invisibly a table of the new harmonised concepts that were
@@ -49,12 +40,63 @@ thus harmonise it with the already existing ontology.
 }
 \examples{
 ontoDir <- system.file("extdata", "crops.rds", package = "ontologics")
+onto <- load_ontology(path = ontoDir)
 
-new_concept(new = c("acacia", "miscanthus"),
-            broader = c("Bioenergy woody", "Bioenergy herbaceous"),
-            class = "crop",
-            source = "external_dataset",
-            path = ontoDir)
+# add fully known concepts
+concepts <- data.frame(
+  old = c("Bioenergy woody", "Bioenergy herbaceous"),
+  new = c("acacia", "miscanthus")
+)
 
-load_ontology(path = ontoDir)
+onto <- new_source(
+  version = "0.0.1",
+  name = "externalDataset",
+  description = "a vocabulary",
+  homepage = "https://www.something.net",
+  license = "CC-BY-0",
+  ontology = onto
+)
+
+onto <- new_concept(
+  new = concepts$new,
+  broader = get_concept(
+              x = data.frame(label = concepts$old),
+              ontology = onto
+            ),
+  class = "crop",
+  ontology = onto
+)
+
+# add concepts where the nesting is clear, but not the new class
+concepts <- data.frame(
+  old = c("Barley", "Barley"),
+  new = c("food", "bio-energy")
+)
+
+onto <- new_concept(
+  new = concepts$new,
+  broader = get_concept(
+              x = data.frame(label = concepts$old),
+              ontology = onto
+            ),
+  ontology = onto
+)
+
+# define that class ...
+onto <- new_class(
+  new = "use type", target = "class",
+  description = "the way a crop is used", ontology = onto
+)
+
+# ... and set the concepts again
+onto <- new_concept(
+  new = concepts$new,
+  broader = get_concept(
+              x = data.frame(label = concepts$old),
+              ontology = onto
+            ),
+  class = "use type",
+  ontology = onto
+)
+
 }

@@ -1,154 +1,209 @@
 #' Get a concept in an ontology
 #'
+#' @param x [`character(1)`][character]\cr a table containing all columns of the
+#'   ontology that shall be filter by the values in those columns.
 #' @param ... combination of column name and value to filter that column by. The
 #'   value to filter by can be provided as regular expression.
-#' @param exact [`logical(1)`][logical]\cr whether or not the value in
+#' @param regex [`logical(1)`][logical]\cr whether or not the value in
 #'   \code{...} shall be matched in full, or whether any partial match should be
 #'   returned.
 #' @param tree [`logical(1)`][logical]\cr whether or not to output the whole
 #'   ontology tree starting from the given search terms.
-#' @param missing [`logical(1)`][logical]\cr whether or not to give only those
-#'   values that are currently missing from the ontology.
-#' @param path [`character(1)`][character]\cr the path where the ontology in
-#'   which to search is stored. It can be omitted in case the option "onto_path"
-#'   has been define (see \code{getOption("onto_path")}).
+#' @param na.rm [`logical(1)`][logical]\cr whether or not missing concepts are
+#'   omitted or not.
+#' @param mappings [`character(1)`][character]\cr the type of mappings within
+#'   which to search for the concepts, possible values are \code{"none"},
+#'   \code{"all"}, \code{"close"}, \code{"broader"}, \code{"narrower"},
+#'   \code{"exact"} or any combination thereof.
+#' @param ontology [`ontology(1)`][list]\cr either a path where the ontology is
+#'   stored, or an already loaded ontology.
 #' @examples
 #' ontoDir <- system.file("extdata", "crops.rds", package = "ontologics")
+#' onto <- load_ontology(path = ontoDir)
 #'
-#' # exact matches
-#' get_concept(label_en = "FODDER CROPS", path = ontoDir)
+#' # exact matches from a loaded ontology ...
+#' get_concept(x = data.frame(label = "FODDER CROPS"), ontology = onto)
+#'
+#' # ... or one stored on the harddisc
+#' get_concept(x = data.frame(label = "FODDER CROPS"), ontology = ontoDir)
 #'
 #' # use regular expressions ...
-#' get_concept(label_en = "/*crops", exact = FALSE, path = ontoDir)
+#' get_concept(x = data.frame(label = "/*crops"), regex = TRUE, ontology = onto)
+#'
+#' get_concept(x = data.frame(label = "/*crops"), has_broader = ".05", regex = TRUE, ontology = onto)
 #'
 #' # get all concepts that are nested into another concept
-#' get_concept(label_en = "FODDER CROPS", tree = TRUE, path = ontoDir)
+#' get_concept(x = data.frame(label = "FODDER CROPS"), tree = TRUE, ontology = onto)
 #' @return A table of a subset of the ontology according to the values in
 #'   \code{...}
 #' @importFrom checkmate assertFileExists assertLogical testChoice
 #' @importFrom tibble as_tibble
 #' @importFrom readr read_rds
 #' @importFrom tidyselect everything
-#' @importFrom rlang quos eval_tidy
-#' @importFrom dplyr filter pull select
-#' @importFrom purrr map_lgl
+#' @importFrom tidyr separate_rows separate pivot_longer pivot_wider
+#' @importFrom rlang quos eval_tidy := sym as_name
+#' @importFrom dplyr filter pull select rename inner_join
+#' @importFrom purrr map map_dfc
 #' @importFrom stringr str_which str_sub
 #' @importFrom magrittr set_names
+#' @importFrom utils head
 #' @export
 
-get_concept <- function(..., exact = TRUE, tree = FALSE, missing = FALSE, #labels = FALSE,
-                        path = NULL){
+get_concept <- function(x = NULL, ..., regex = FALSE, tree = FALSE,
+                        na.rm = FALSE, mappings = "none", ontology = NULL){
 
-  if(!is.null(path)){
-    assertFileExists(x = path, access = "rw", extension = "rds")
+  assertDataFrame(x = x, null.ok = FALSE)
+  assertLogical(x = regex, len = 1, any.missing = FALSE)
+  assertLogical(x = tree, len = 1, any.missing = FALSE)
+  assertLogical(x = na.rm, len = 1, any.missing = FALSE)
+  assertSubset(x = mappings, choices = c("all", "none", "close", "broader", "narrower", "exact"))
+
+  if("none" %in% mappings){
+    mappings <- NULL
   } else {
-    path <- getOption("onto_path")
+    if("all" %in% mappings){
+      mappings <- c("close", "broader", "narrower", "exact")
+    }
+    mappings <- paste0("has_", mappings, "_match")
   }
 
-  ontology <- read_rds(file = path)
-  onto <- left_join(ontology$attributes %>% filter(source %in% c("harmonised", "imported")),
-                    ontology$mappings %>% select(-label_en, -class), by = "code") %>%
-    select(code, label_en, class, everything())
-  extConcepts <- ontology$attributes %>% filter(!source %in% c("harmonised", "imported"))
+  if(!inherits(x = ontology, what = "onto")){
+    assertFileExists(x = ontology, access = "r", extension = "rds")
+    ontoPath <- ontology
+    theName <- tail(str_split(string = ontology, "/")[[1]], 1)
+    theName <- head(str_split(string = theName, pattern = "[.]")[[1]], 1)
 
-  assertLogical(x = exact, len = 1, any.missing = FALSE)
-  assertLogical(x = tree, len = 1, any.missing = FALSE)
+    ontology <- load_ontology(path = ontoPath)
+  }
 
-  attrib <- quos(...)
+  theConcepts <- ontology@concepts
+
+  attrib <- quos(..., .named = TRUE)
   # return(attrib)
 
-  if(length(attrib) == 0){
-    return(onto)
-  }
-
   # identify attributes that are not in the ontology
-  if(!all(names(attrib) %in% colnames(onto))){
-    sbst <- names(attrib) %in% colnames(onto)
+  if(!all(names(attrib) %in% colnames(theConcepts$harmonised))){
+    sbst <- names(attrib) %in% colnames(theConcepts$harmonised)
     theName <- names(attrib)[!sbst]
     warning(paste0("'", paste0(theName, collapse = ", "), "' is not a column in the ontology and is thus ignored."))
     attrib <- attrib[sbst]
   }
 
-  temp <- data.frame(matrix(ncol = length(colnames(onto)), nrow = 0, data = NA_character_)) %>%
-    as_tibble() %>%
-    set_names(colnames(onto))
-  empty <- data.frame(matrix(ncol = length(colnames(onto)), nrow = 1, data = NA_character_)) %>%
-    as_tibble() %>%
-    set_names(colnames(onto))
+  if(regex){
 
-  for(i in seq_along(attrib)){
-    toSearch <- as.character(eval_tidy(attrib[[i]]))
-    missTemp <- NULL
+    if(!is.null(x)){
+      toOut <- ontology@concepts$harmonised %>%
+        filter(str_detect(label, x$label))
+    } else {
+      toOut <- ontology@concepts$harmonised
+    }
 
-    for(j in seq_along(toSearch)){
+    for(i in seq_along(attrib)){
 
-      pos <- str_which(string = onto[[names(attrib)[i]]], pattern = toSearch[j])
-      posExt <- str_which(string = extConcepts[[names(attrib)[i]]], pattern = toSearch[j])
+      toOut <- toOut %>%
+        filter(str_detect(toOut[[names(attrib)[i]]], paste0(as_name(attrib[[i]]), collapse = "|")))
 
-      if(exact){
-        if(is.na(toSearch[j]) | toSearch[j] == ""){
-          newTab <- empty
-        } else {
-          if(length(pos) == 0 & length(posExt) == 0){
-            if(missing){
-              missTemp <- c(missTemp, toSearch[j])
-              next
-            } else{
-              stop(paste0("the concept '", toSearch[j], "' (", j, ") is not yet defined."))
-            }
-          } else {
-            if(length(pos) != 0){
-              newTab <- onto[onto[[names(attrib)[i]]] %in% toSearch[j],]
-            } else if(length(posExt) != 0){
-              extTab <- extConcepts$code[posExt]
+    }
 
-              posExt <- map_lgl(seq_along(onto$external), function(ix){
-                temp <- str_split(onto$external[ix], ", ")[[1]]
-                if(any(temp %in% extTab)){
-                  return(TRUE)
-                } else {
-                  return(FALSE)
-                }
-              })
-              newTab <- onto[posExt,]
-            }
-          }
-        }
-      } else {
-        newTab <- onto[pos,]
-      }
+  } else {
 
-      if(dim(newTab)[1] != 1 & exact){
-        warning(paste0("concept ", j, " (", toSearch[j],") has ", dim(newTab)[1], " entries"), call. = FALSE)
-      }
+    assertNames(x = names(x), subset.of = c("id", "has_broader", "source_id", "class", "label", "source_label", "external_label"))
 
-      if(j == 1){
-        temp <- newTab
-      } else {
+    # get the already harmonised concepts
+    toOut <- x %>%
+      left_join(theConcepts$harmonised, by = colnames(x))
+
+    if(!is.null(mappings)){
+
+      # and replace external IDs with the labels
+      toOut <- toOut%>%
+        pivot_longer(cols = c(has_close_match, has_broader_match, has_narrower_match, has_exact_match), names_to = "match", values_to = "extid") %>%
+        separate_rows(extid, sep = " \\| ") %>%
+        separate(col = extid, into = c("extid", "certainty"), sep = "[.]") %>%
+        left_join(theConcepts$external %>% select(extid = id, external_label = label), by = "extid") %>%
+        group_by(label, class, id, description, has_broader, match) %>%
+        summarise(external_label = paste0(external_label, collapse = " | ")) %>%
+        ungroup() %>%
+        mutate(external_label = na_if(external_label, "NA")) %>%
+        pivot_wider(id_cols = c(label, class, id, description, has_broader), names_from = match, values_from = external_label)
+
+      toOutCompl <- toOut %>%
+        filter(!is.na(id))
+
+      matchCols <- colnames(x)[colnames(x) %in% colnames(theConcepts$external)]
+      toMatch <- x %>%
+        left_join(theConcepts$external, matchCols) %>%
+        filter(!is.na(id)) %>%
+        filter(!label %in% toOutCompl$label)
+
+      if(dim(toMatch)[1] != 0){
+        temp <- theConcepts$harmonised %>%
+          pivot_longer(cols = mappings, names_to = "match", values_to = "extid") %>%
+          filter(!is.na(extid)) %>%
+          separate_rows(extid, sep = " \\| ") %>%
+          separate(col = extid, into = c("extid", "certainty"), sep = "[.]") %>%
+          left_join(toMatch %>% select(extid = id, external_label = label), by = "extid") %>%
+          filter(!is.na(external_label))
+
+        toOut <- toOut %>%
+          filter(!label %in% temp$external_label)
+
         temp <- temp %>%
-          bind_rows(newTab)
+          group_by(id, label, class, description, has_broader, match) %>%
+          summarise(external_label = paste0(external_label, collapse = " | ")) %>%
+          ungroup() %>%
+          pivot_wider(id_cols = c(id, label, class, description, has_broader), names_from = match, values_from = external_label)
+
+        toOut <- toOut %>%
+          bind_rows(temp) %>%
+          arrange(id)
       }
+
+    } else {
+      toOut <- toOut %>%
+        select(id, label, class, description, has_broader) %>%
+        arrange(id)
+    }
+
+    for(i in seq_along(attrib)){
+
+      toOut <- toOut %>%
+        filter(str_detect(toOut[[names(attrib)[i]]], paste0(eval_tidy(attrib[[i]]), collapse = "|")))
 
     }
 
   }
 
-  if(tree){
+  # if(missing){
 
-    topID <- temp %>%
-      pull(code) %>%
-      unique()
+    # out <- toOut %>%
+      # filter(is.na(id))
 
-    temp <- make_tree(onto, topID)
+  # } else {
 
-  }
+    if(tree){
 
-  temp <- temp %>%
-    select(code, broader, label_en, class, external)
+      topID <- toOut %>%
+        pull(id) %>%
+        unique()
 
-  if(missing){
-    return(missTemp)
-  } else {
-    return(temp)
-  }
+      out <- make_tree(theConcepts$harmonised, topID)
+
+    } else {
+
+      if(na.rm){
+        out <- toOut %>%
+          filter(!is.na(id))
+      } else {
+        out <- toOut
+      }
+    }
+
+  out <- out %>%
+    select(label, class, id, has_broader, description, everything())
+
+  # }
+
+  return(out)
+
 }
