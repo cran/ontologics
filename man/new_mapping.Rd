@@ -8,13 +8,14 @@ new_mapping(
   new = NULL,
   target,
   source = NULL,
-  description = NULL,
+  lut = NULL,
   match = NULL,
   certainty = NULL,
   type = "concept",
   ontology = NULL,
   matchDir = NULL,
-  verbose = FALSE
+  verbose = FALSE,
+  beep = NULL
 )
 }
 \arguments{
@@ -27,8 +28,10 @@ label(s) to which the external labels shall be mapped.}
 \item{source}{\code{\link[=character]{character(1)}}\cr any character uniquely
 identifying the source dataset of the new label.}
 
-\item{description}{\code{\link[=character]{character(.)}}\cr a verbatim description of
-the new label.}
+\item{lut}{\code{\link[=character]{character(.)}}\cr in case the terms used for mapping
+are from a look up table (i.e. a standardised set of terms with a
+description), provide this table with column names 'label' and '
+description' here.}
 
 \item{match}{\code{\link[=character]{character(1)}}\cr the
 \href{https://www.w3.org/TR/skos-reference/#mapping}{skos mapping property}
@@ -52,6 +55,10 @@ source-specific matching tables.}
 
 \item{verbose}{\code{\link[=logical]{logical(1)}}\cr whether or not to give detailed
 information on the process of this function.}
+
+\item{beep}{\code{\link[=integer]{integerish(1)}}\cr Number specifying what sound to be
+played to signal the user that a point of interaction is reached by the
+program, see \code{\link[beepr]{beep}}.}
 }
 \value{
 No return value, called for the side effect of adding new mappings to
@@ -78,7 +85,7 @@ onto <- new_source(name = "externalDataset",
                    license = "CC-BY-0",
                    ontology = onto)
 
-onto <- get_concept(x = data.frame(label = mapping$old), ontology = onto) \%>\%
+onto <- get_concept(table = data.frame(label = mapping$old), ontology = onto) \%>\%
   new_mapping(new = mapping$new,
               target = .,
               match = mapping$type,

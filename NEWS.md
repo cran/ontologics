@@ -1,6 +1,43 @@
+# ontologics 0.6.4
+
+- implement better filtering on parent concepts to simplify editing matches.
+
+# ontologics 0.6.3
+
+- include matches with 0 difference already as close match, for convenience.
+
+# ontologics 0.6.2
+
+- fix a little bug located in `new_mapping()`.
+
+# ontologics 0.6.1
+
+- when matching a new dataseries with old concepts, give a message and ignore non-close matches.
+
+# ontologics 0.6.0 - fuzzy matching
+
+- fuzzy matching implemented. When concepts that are new for mapping do not match exactly, fuzzy matching is carried out and three new columns are offered for assigning the new concepts to harmonised concepts
+
+# ontologics 0.5.6
+
+- small fix that would not allow to match with an empty set of values.
+
+# ontologics 0.5.5
+
+- introduce function where a table with columns per classes in the ontology can be used to retrieve concepts. This table is matched with a flattened ontology. Currently, no mappings are attached to this table.
+
+# ontologics 0.5.4
+
+- reconstruct regex functionality and enable extracting of external concepts in `get_concept()`
+
+# ontologics 0.5.3
+
+- reconstruct extracting mappings in `get_concept()`
+
 # ontologics 0.5.2
 
-- fix documentation to make it fit for CRAN.
+- write the getters `get_class()` and `get_source()`
+- reconstruct sorting in `get_concept()` so that it corresponds to the order of the input table
 
 # ontologics 0.5.1
 

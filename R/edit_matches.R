@@ -17,6 +17,9 @@
 #'   source-specific matching tables.
 #' @param verbose [`logical(1)`][logical]\cr whether or not to give detailed
 #'   information on the process of this function.
+#' @param beep [`integerish(1)`][integer]\cr Number specifying what sound to be
+#'   played to signal the user that a point of interaction is reached by the
+#'   program, see \code{\link[beepr]{beep}}.
 #' @details In order to match new concepts into an already existing ontology, it
 #'   may become necessary to carry out manual matches of the new concepts with
 #'   already harmonised concepts, for example, when the new concepts are
@@ -28,21 +31,27 @@
 #'   table" with the name \emph{match_SOURCE.csv} in the respective directory
 #'   (\code{matchDir}), from where work can be picked up and continued at
 #'   another time.
+#'
+#'   Fuzzy matching is carried out and matches with 0, 1 or 2 differing
+#'   charcters are presented in a respective column.
 #' @return A table that contains all new matches, or if none of the new concepts
 #'   weren't already in the ontology, a table of the already sucessful matches.
 #' @importFrom checkmate assertDataFrame assertNames assertCharacter
 #'   assertFileExists testFileExists
 #' @importFrom utils tail head
-#' @importFrom stringr str_split str_detect
+#' @importFrom stringr str_split
 #' @importFrom readr read_csv write_csv cols
 #' @importFrom dplyr filter rename full_join mutate if_else select left_join
-#'   bind_rows distinct arrange
-#' @importFrom tidyselect everything
+#'   bind_rows distinct arrange any_of
+#' @importFrom tidyselect everything starts_with
 #' @importFrom tidyr pivot_longer pivot_wider
+#' @importFrom tibble add_column
+#' @importFrom fuzzyjoin stringdist_left_join
 #' @export
 
 edit_matches <- function(concepts, attributes = NULL, source = NULL,
-                         ontology = NULL, matchDir = NULL, verbose = TRUE){
+                         ontology = NULL, matchDir = NULL, verbose = TRUE,
+                         beep = NULL){
 
   assertDataFrame(x = concepts, min.cols = 1)
   assertNames(x = names(concepts), must.include = c("label"))
@@ -63,15 +72,12 @@ edit_matches <- function(concepts, attributes = NULL, source = NULL,
     ontology <- load_ontology(path = ontoPath)
   }
 
-  # ... and store the newly defined matches as a source specific matching table
-  if(testFileExists(paste0(matchDir, sourceFile))){
-    prevMatches <- read_csv(paste0(matchDir, sourceFile), col_types = cols(.default = "c"))
-  } else {
-    prevMatches <- NULL
-  }
-
   filterClasses <- ontology@classes$harmonised %>%
     filter(label %in% attributes$class)
+  filterClassLevel <- length(str_split(string = filterClasses$id, pattern = "[.]")[[1]])
+  if(dim(filterClasses)[1] == 0){
+    stop("no classes are matched in the ontology.")
+  }
   while(!any(is.na(filterClasses$has_broader))){
     filterClasses <- ontology@classes$harmonised %>%
       filter(label %in% filterClasses$label | label %in% filterClasses$has_broader)
@@ -80,111 +86,277 @@ edit_matches <- function(concepts, attributes = NULL, source = NULL,
     pull(label) %>%
     unique()
   attributes <- attributes %>%
-    select(-class)
+    mutate(lvl = length(str_split(has_broader, "[.]")[[1]]))
+  if(all(attributes$lvl < filterClassLevel-1)){
+    parentFilter <- unique(attributes$has_broader)
+    withBroader <- NULL
+    attributes <- attributes %>%
+      select(-class, -has_broader, -lvl)
+  } else {
+    parentFilter <- NULL
+    withBroader <- "has_broader"
+    attributes <- attributes %>%
+      select(-class, -lvl)
+  }
 
   allAttribs <- concepts %>%
     bind_cols(attributes)
   selectedCols <- which(colnames(allAttribs) %in% c("id", "has_broader", "source_id", "class", "label", "source_label", "external_label"))
 
-  temp <- get_concept(x = allAttribs[,selectedCols], na.rm = FALSE, ontology = ontology, mappings = "all") %>%
-    left_join(allAttribs)
+  temp <- get_concept(table = allAttribs[,selectedCols], ontology = ontology, mappings = TRUE)
 
-  # determine those concepts, that are not yet defined in the ontology
-  if(!is.null(prevMatches)){
+  # determine previous matches
+  if(testFileExists(paste0(matchDir, sourceFile))){
+    prevAvail <- TRUE
+    prevMatches <- read_csv(paste0(matchDir, sourceFile), col_types = cols(.default = "c"))
 
-    temp <- prevMatches %>%
+    prevMatchLabels <- prevMatches %>%
+      filter(class %in% tail(filterClasses, 1)) %>%
+      pivot_longer(cols = c(has_broader_match, has_close_match, has_exact_match, has_narrower_match), values_to = "labels") %>%
+      filter(!is.na(labels)) %>%
+      distinct(labels) %>%
+      separate_rows(labels, sep = " \\| ") %>%
+      pull(labels)
+  } else {
+    prevAvail <- FALSE
+    # if no previous matches are present, match the new concepts with the already
+    # harmonised concepts in assumption that a match on the term is also a match on
+    # the underlying concept
+    tempMatch <- temp %>%
+      mutate(has_close_match = label) %>%
+      select(label, has_close_match, has_broader)
+    prevMatches <- ontology@concepts$harmonised %>%
       filter(class %in% filterClasses) %>%
-      rename(harmLab = label) %>%
-      pivot_longer(cols = c(has_broader_match, has_close_match, has_exact_match, has_narrower_match),
-                   names_to = "match", values_to = "label") %>%
+      select(-has_close_match) %>%
+      left_join(tempMatch, ., by = c("label", "has_broader")) %>%
+      filter(!is.na(id)) %>%
+      mutate(has_broader_match = NA_character_,
+             has_exact_match = NA_character_,
+             has_narrower_match = NA_character_)
+
+    prevMatchLabels <- prevMatches %>%
+      distinct(label) %>%
       separate_rows(label, sep = " \\| ") %>%
-      full_join(temp, by = c("label", "class", "id", "has_broader", "description")) %>%
-      filter(!(is.na(match) & !is.na(id))) %>%
-      mutate(harmLab = if_else(is.na(match), label, harmLab),
-             match = if_else(!is.na(has_close_match), "has_close_match", if_else(is.na(match), "sort_in", match)),
-             label = if_else(is.na(match), NA_character_, label)) %>%
-      pivot_wider(id_cols = c(harmLab, class, id, has_broader, description), names_from = match,
-                  values_from = label, values_fn = ~paste0(.x, collapse = " | ")) %>%
-      na_if(y = "NA") %>%
-      rename(label = harmLab)
+      pull(label)
 
-    if("sort_in" %in% colnames(temp)){
-      temp <- temp %>%
-        select(-sort_in)
+    if(dim(prevMatches)[1] == 0){
+      prevMatches[1,] <- "ignore"
+      prevMatches$class <- filterClasses[1]
     }
-
   }
 
-  missingConcepts <- temp %>%
-    filter(is.na(id))
-  inclConcepts <- temp %>%
-    filter(!is.na(id))
+  # gather all concepts for the focal data-series (previous matches from
+  # matching table and matches that may already be in the ontology) ...
+  dsConcepts <- prevMatches %>%
+    filter(class %in% filterClasses) %>%
+    rename(harmLab = label) %>%
+    pivot_longer(cols = c(has_broader_match, has_close_match, has_exact_match, has_narrower_match),
+                 names_to = "match", values_to = "label") %>%
+    separate_rows(label, sep = " \\| ") %>%
+    full_join(temp, by = c("label", "class", "id", "has_broader", "description")) %>%
+    mutate(harmLab = if_else(is.na(harmLab), label, harmLab),
+           label = if_else(is.na(match), if_else(!is.na(id), label, NA_character_), label),
+           match = if_else(is.na(match), if_else(!is.na(id), "has_close_match", "sort_in"), match)) %>%
+    pivot_wider(id_cols = c(harmLab, class, id, has_broader, description), names_from = match,
+                values_from = label, values_fn = ~paste0(na.omit(.x), collapse = " | ")) %>%
+    na_if(y = "") %>%
+    filter(harmLab != "ignore") %>%
+    rename(label = harmLab)
 
-  # build a table of external concepts and of harmonised concepts these should be overwritten with
+  if("sort_in" %in% colnames(dsConcepts)){
+    dsConcepts <- dsConcepts %>%
+      select(-sort_in)
+  }
+  if(!"has_close_match" %in% colnames(dsConcepts)){
+    dsConcepts <- dsConcepts %>%
+      add_column(has_close_match = NA_character_, .after = "description")
+  }
+  if(!"has_broader_match" %in% colnames(dsConcepts)){
+    dsConcepts <- dsConcepts %>%
+      add_column(has_broader_match = NA_character_, .after = "has_close_match")
+  }
+  if(!"has_exact_match" %in% colnames(dsConcepts)){
+    dsConcepts <- dsConcepts %>%
+      add_column(has_exact_match = NA_character_, .after = "has_broader_match")
+  }
+  if(!"has_narrower_match" %in% colnames(dsConcepts)){
+    dsConcepts <- dsConcepts %>%
+      add_column(has_narrower_match = NA_character_, .after = "has_exact_match")
+  }
+
+  # ... and determine which are already included concepts and which are still missing
+  inclConcepts <- dsConcepts %>%
+    filter(!is.na(id))
+  missingConcepts <- dsConcepts %>%
+    filter(is.na(id) & !label %in% prevMatchLabels)
+
   if(dim(missingConcepts)[1] != 0){
 
-    relate <- ontology@concepts$harmonised %>%
+    if(!is.null(parentFilter)){
+      toRelate <- make_tree(get_concept(table = tibble(id = parentFilter), ontology = ontology),
+                            ontology = ontology)
+    } else {
+      toRelate <- ontology@concepts$harmonised
+    }
+    relate <- toRelate %>%
       select(id, label, class, has_broader) %>%
       left_join(inclConcepts, by = c("id", "label", "class", "has_broader")) %>%
       filter(!is.na(class)) %>%
       filter(class %in% filterClasses)
 
+    toJoin <- relate %>%
+      rename(label_harm = label) %>%
+      mutate(label = tolower(label_harm)) %>%
+      filter(!is.na(label_harm) & class == tail(filterClasses, 1)) %>%
+      select(-has_broader, -has_broader_match, -has_close_match, -has_exact_match, -has_narrower_match)
+
+    joined <- missingConcepts %>%
+      select(label_new = label, has_broader) %>%
+      mutate(label = tolower(label_new)) %>%
+      stringdist_left_join(toJoin, by = "label", distance_col = "dist", max_dist = 2)
+
+    if(!all(is.na(joined$dist))){
+      joined <- joined %>%
+        select(-label.x, -label.y) %>%
+        arrange(dist) %>%
+        mutate(dist = paste0("dist_", dist)) %>%
+        pivot_wider(names_from = dist, values_from = label_harm)
+      if(!"dist_0" %in% colnames(joined)){
+        joined <- joined %>%
+          add_column(dist_0 = NA_character_, .after = "description")
+      }
+      if(!"dist_1" %in% colnames(joined)){
+        joined <- joined %>%
+          add_column(dist_1 = NA_character_, .after = "dist_0")
+      }
+      if(!"dist_2" %in% colnames(joined)){
+        joined <- joined %>%
+          add_column(dist_2 = NA_character_, .after = "dist_1")
+      }
+
+      joined <- joined %>%
+        group_by(label_new, has_broader) %>%
+        summarise(across(starts_with("dist_"), ~ paste0(na.omit(unique(.x)), collapse = " | "))) %>%
+        na_if("") %>%
+        ungroup() %>%
+        select(label = label_new, has_broader, has_0_differences = dist_0, has_1_difference = dist_1, has_2_differences = dist_2)
+
+      hits <- joined %>%
+        filter(!is.na(has_0_differences)) %>%
+        mutate(class = tail(filterClasses, 1),
+               has_new_close_match = label,
+               label = has_0_differences) %>%
+        select(label, all_of(withBroader), class, has_new_close_match)
+
+      numbers <- relate %>%
+        group_by(label) %>%
+        summarise(n = n())
+
+      relate <- relate %>%
+        left_join(hits, by = c("label", "class", withBroader)) %>%
+        left_join(numbers, by = "label") %>%
+        mutate(has_new_close_match = if_else(n > 1, NA_character_, has_new_close_match)) %>%
+        unite(col = "has_close_match", has_close_match, has_new_close_match, sep = " | ", na.rm = TRUE) %>%
+        na_if(y = "") %>%
+        select(-n)
+
+      missingJoined <- joined %>%
+        filter(is.na(has_0_differences))
+      missingConcepts <- missingConcepts %>%
+        filter(label %in% missingJoined$label) %>%
+        left_join(joined %>% select(-has_broader, -has_0_differences), by = "label")
+
+    }
+
     sortIn <- missingConcepts %>%
-      select(-colnames(attributes)[which(colnames(attributes) %in% colnames(missingConcepts))]) %>%
-      left_join(concepts %>% bind_cols(attributes), by = "label") %>%
+      left_join(concepts, by = "label") %>%
       mutate(sort_in = label,
-        label = NA_character_,
-        class = NA_character_) %>%
+             label = NA_character_,
+             class = NA_character_) %>%
       select(sort_in, names(attributes), id, has_broader, label, class, everything())
 
     # put together the object that shall be edited by the user ...
-    sortIn %>%
-      bind_rows(relate) %>%
-      write_csv(file = paste0(matchDir, "/matching.csv"), quote = "all", na = "")
+    if(dim(sortIn)[1] != 0){
 
-    # ... and make them aware of their duty
-    message("please edit the file '", paste0(matchDir, "/matching.csv"), "' \n")
-    if(verbose){
-      message("--- column description ---\n")
-      message("sort_in             cut out these values and sort them either into 'has_broader_match', \n                    'has_exact_match', has_narrower_match or 'has_close_match'")
-      message("id                  filter by this column to jump to the subset you need to edit")
-      message("label               concepts to which the new terms should be related")
-      message("class               the class of harmonised concepts")
-      message("has_close_match     in case a new concept is a close match to the harmonised concept, paste \n                    it here, delimit several concepts with a '|'")
-      message("has_broader_match   in case a new concept is a broader match than the harmonised concept, \n                    paste it here, delimit several concepts with a '|'")
-      message("has_narrower_match  in case a new concept is a narrower match than the harmonised concept, \n                    paste it here, delimit several concepts with a '|'")
-      message("has_exact_match     in case a new concept is an exact match to the harmonised concept \n                    (which is only the case when it's from the same ontology), paste it \n                    here, delimit several concepts with a '|'")
-      message("\n--- some useful tips ---")
-      message("\n-> values that were already successfully matched by previous translations are listed here, \n   however, altering them here doesn't change the ontology. \n\n-> any row that doesn't contain a value in the column 'code' will be discarded. Hence, \n   if you want a value to be ignored, simply don't paste it anywhere. \n\n-> do not change the values in the columns 'code', 'harmonised' and 'class', as they \n   are important to insert the new matches into the ontology. \n\n-> if a term shall be nested into a position that doesn't have a class, (for example, \n   because that class occurrs the first time with this term) first create that nested \n   class with 'new_class()'.\n")
-    }
-    done <- readline(" -> press any key when done: ")
+      sortIn %>%
+        bind_rows(relate) %>%
+        write_csv(file = paste0(matchDir, "/matching.csv"), quote = "all", na = "")
 
-    related <- read_csv(paste0(matchDir, "/matching.csv"), col_types = cols(.default = "c")) %>%
-      filter(!is.na(id)) %>%
-      select(-sort_in)
+      if(!is.null(beep)){
+        beep(sound = beep)
+      }
 
-    if(dim(related)[1] == 0){
-      related <- NULL
+      # ... and make them aware of their duty
+      if(prevAvail){
+        message("\nprevious matches found for this dataseries, only previously not matched terms are presented")
+      } else {
+        message("\nno previous matches found for this dataseries, close match with other potentially available terms is presented")
+      }
+
+      message("-> please edit the file '", paste0(matchDir, "/matching.csv"), "' \n")
+      if(verbose){
+        message("--- column description ---\n")
+        message("sort_in             cut out these values and sort them either into 'has_broader_match', \n                    'has_exact_match', has_narrower_match or 'has_close_match'")
+        message("has_broader         the broader concept id of each of the already harmonised concepts")
+        message("id                  filter by this column to jump to the subset you need to edit")
+        message("label               concepts to which the new terms should be related")
+        message("class               the class of harmonised concepts")
+        message("description         the description of each concept")
+        message("has_close_match     in case a new concept is a close match to the harmonised concept, paste \n                    it here, delimit several concepts with a '|'")
+        message("has_broader_match   in case a new concept is a broader match than the harmonised concept, \n                    paste it here, delimit several concepts with a '|'")
+        message("has_narrower_match  in case a new concept is a narrower match than the harmonised concept, \n                    paste it here, delimit several concepts with a '|'")
+        message("has_exact_match     in case a new concept is an exact match to the harmonised concept \n                    (which is only the case when it's from the same ontology), paste it \n                    here, delimit several concepts with a '|'")
+        message("has_x_differences   in case a new concepts matches via fuzzy matching with any of the already \n                    existing concepts, those concepts are shown in the columns with the \n                    respective number of character differences")
+        message("\n--- some useful tips ---")
+        message("\n-> values that were already successfully matched by previous translations are listed, \n   however, altering already matched concepts doesn't change the ontology. \n\n-> any row that doesn't contain a value in the column 'id' will be discarded. Hence, \n   if you want a value to be ignored, simply don't paste it anywhere. \n\n-> do not change the values in the columns 'id', 'label' and 'class', as they are \n   important to insert the new matches into the ontology. \n\n-> if a term shall be nested into a position that doesn't have a class, (for example, \n   because that class occurrs the first time with this term) first create that nested \n   class with 'new_class()'.\n")
+      }
+      done <- readline(" -> press any key when done: ")
+
+      related <- read_csv(paste0(matchDir, "/matching.csv"), col_types = cols(.default = "c"))
+      assertNames(x = names(related), must.include = c("sort_in", "has_broader", "id", "label", "class", "description", "has_broader_match", "has_close_match", "has_exact_match", "has_narrower_match"))
+      related <- related %>%
+        select(-sort_in) %>%
+        filter(!is.na(id))
+
+      if("dist" %in% names(joined)){
+        if(!all(is.na(joined$dist))){
+          related <- related %>%
+            select(-any_of("has_0_differences", "has_1_difference", "has_2_differences"))
+        }
+      }
+
+      if(dim(related)[1] == 0){
+        related <- NULL
+      }
+
+    } else {
+      related <- prevMatches
     }
 
   } else {
     related <- inclConcepts
   }
 
-  out <- prevMatches %>%
-    bind_rows(related) %>%
-    pivot_longer(cols = c(has_broader_match, has_close_match, has_exact_match, has_narrower_match),
-                 names_to = "match", values_to = "new_label") %>%
-    separate_rows(new_label, sep = " \\| ") %>%
-    distinct() %>%
-    group_by(id, has_broader, label, class, description, match) %>%
-    summarise(new_label = paste0(new_label, collapse = " | "), .groups = "keep") %>%
-    ungroup() %>%
-    mutate(new_label = na_if(x = new_label, y = "NA")) %>%
-    pivot_wider(id_cols = c(label, class, id, has_broader, description), names_from = match, values_from = new_label) %>%
-    distinct() %>%
-    filter(!is.na(has_broader_match) | !is.na(has_close_match) | !is.na(has_narrower_match) | !is.na(has_exact_match)) %>%
-    arrange(id)
+  if(!is.null(related)){
+
+    out <- prevMatches %>%
+      filter(!id == "ignore") %>%
+      bind_rows(related) %>%
+      pivot_longer(cols = c(has_broader_match, has_close_match, has_exact_match, has_narrower_match),
+                   names_to = "match", values_to = "new_label") %>%
+      separate_rows(new_label, sep = " \\| ") %>%
+      distinct() %>%
+      group_by(id, has_broader, label, class, description, match) %>%
+      summarise(new_label = paste0(na.omit(new_label), collapse = " | "), .groups = "keep") %>%
+      ungroup() %>%
+      mutate(new_label = na_if(x = new_label, y = "")) %>%
+      pivot_wider(id_cols = c(label, class, id, has_broader, description), names_from = match, values_from = new_label) %>%
+      distinct() %>%
+      filter(!is.na(has_broader_match) | !is.na(has_close_match) | !is.na(has_narrower_match) | !is.na(has_exact_match)) %>%
+      filter(!is.na(id)) %>%
+      arrange(id)
+
+  }
 
   write_csv(x = out, file = paste0(matchDir, sourceFile), append = FALSE, na = "")
 
