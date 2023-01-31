@@ -1,9 +1,9 @@
-16ba17429f4f7e0832c7c5dac40ccf60 *DESCRIPTION
+8f278e986ec8bc8303d6f05e8df00151 *DESCRIPTION
 3cccaee41cd9e332821e9f4eefba3444 *NAMESPACE
-3af66da265eade6a03e8dd15e6acba4d *NEWS.md
+96656e0a5e459d9eaa547f2db203cbdc *NEWS.md
 23eba0ee0643099414d695118e4cf388 *R/1onto.R
-c8ae98f34fbb5cbd4c9313f0efa036a5 *R/edit_matches.R
-6f7726f331e108e40227cca1ee24352b *R/export_as_rdf.R
+b4e913511a5e200d7aa6cbd428d2e8f4 *R/edit_matches.R
+73ccb38a0ee94b190dfaa821fe19d0de *R/export_as_rdf.R
 3387e412bec1a8c5fa7c3615b71ae6b3 *R/get_class.R
 1aa742861549dad7813793ddb64b7abc *R/get_concept.R
 48045af868266aa57e539566e998e423 *R/get_source.R
@@ -13,7 +13,7 @@ a765e91a25c42f2eb7dc0447eafaee63 *R/load_ontology.R
 31635778c2160128443aad677ad0389f *R/make_tree.R
 1ad66b390f142e89f2db6a5165e58f8f *R/new_class.R
 a998d010032a78e9d79dcbe104ae9078 *R/new_concept.R
-8ced25c0e69518a8491b31046f37beb3 *R/new_mapping.R
+37c70450cdd31651171bc9c9cb627230 *R/new_mapping.R
 da40731ebe6821428c3f885472293376 *R/new_source.R
 8a7bdc8de091a0ce4ba0928cb859e939 *R/start_ontology.R
 7fb5712e72bea989316fc4f21100d29f *R/zzz.R
@@ -24,7 +24,7 @@ d741c90f8ef4b4c0b274889925de63ba *inst/doc/conversion_to_rdf.R
 d0ff02c56d0ddb3f3db69e9cb735f2b2 *inst/doc/conversion_to_rdf.html
 25f99f52c68c065235a7b039d5e93aa4 *inst/doc/create_an_ontology.R
 cca1bd749b1eb25e19bf124061071e7d *inst/doc/create_an_ontology.Rmd
-bb9fa35f11e404d2707b8b914a22f3d9 *inst/doc/create_an_ontology.html
+059128d96dc50d1ff4a4551fa76f01b7 *inst/doc/create_an_ontology.html
 b772bf796a0f6ebdd954cbeb31dd2169 *inst/doc/map_new_concepts.R
 85da8b2af1c53b586a02336467b51915 *inst/doc/map_new_concepts.Rmd
 e20a63fdd3b22563c7423e4da254faaa *inst/doc/map_new_concepts.html
