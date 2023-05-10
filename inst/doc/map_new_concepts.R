@@ -22,14 +22,16 @@ crops <- new_source(name = "externalDataset",
                     ontology = crops)
 
 # new concepts that occur in the external dataset, which should be harmonised with the ontology
-externalConcepts <- tibble(label = c("Wheat", "NUTS", "Avocado"))
+externalConcepts <- c("Wheat", "NUTS", "Avocado")
 
 ## ----get_concepts missing-----------------------------------------------------
-missingConcepts <- get_concept(table = externalConcepts, ontology = crops)
-kable(missingConcepts)
+missingConcepts <- get_concept(label = externalConcepts, ontology = crops)
+missingConcepts %>% 
+  select(1:5) %>% 
+  kable()
 
 ## ----set_concept--------------------------------------------------------------
-broaderConcepts <- get_concept(table = tibble(label = c("Wheat", "Tropical and subtropical Fruit")), 
+broaderConcepts <- get_concept(label = c("Wheat", "Tropical and subtropical Fruit"), 
                                ontology = crops)
 
 crops <- new_concept(new = c("wheat", "avocado"),
@@ -38,10 +40,10 @@ crops <- new_concept(new = c("wheat", "avocado"),
                      ontology = crops)
 
 ## ----set_mapping--------------------------------------------------------------
-toMap <- get_concept(table = tibble(label = c("wheat", "NUTS", "avocado")),
+toMap <- get_concept(label = c("wheat", "NUTS", "avocado"),
                      ontology = crops)
 
-crops <- new_mapping(new = externalConcepts %>% pull(label),
+crops <- new_mapping(new = externalConcepts,
                      target = toMap,
                      match = c("close", "close", "close"),
                      source = "externalDataset",
@@ -49,7 +51,7 @@ crops <- new_mapping(new = externalConcepts %>% pull(label),
                      ontology = crops)
 
 ## -----------------------------------------------------------------------------
-broaderConcepts <- get_concept(table = tibble(label = c("wheat", "wheat")),
+broaderConcepts <- get_concept(label = c("wheat", "wheat"),
                                ontology = crops)
 
 # for (some of) these concepts we do not know the class ...
@@ -58,9 +60,8 @@ crops <- new_concept(new = c("wheat1", "wheat2"),
                      class = NA_character_,
                      ontology = crops)
 
-get_concept(table = tibble(label = "Wheat"), ontology = crops) %>%
-  make_tree(ontology = crops) %>% 
-  select(1:5) %>% 
+make_tree(label = "Wheat", ontology = crops) %>%
+  select(1:5) %>%
   kable()
 
 # ... ok, then let's specify that class and re-run new_concept
@@ -74,21 +75,15 @@ crops <- new_concept(new = c("wheat1", "wheat2"),
                      ontology = crops)
 
 ## ----new ontology-------------------------------------------------------------
-get_concept(table = tibble(label = "Wheat"), ontology = crops) %>%
-  make_tree(ontology = crops) %>% 
-  select(1:6) %>% 
+make_tree(label = "Wheat", ontology = crops) %>%
+  select(1:5) %>%
   kable()
-
-get_concept(table = tibble(label = "NUTS"), ontology = crops) %>% 
-  make_tree(ontology = crops) %>% 
-  select(1:6) %>% 
+make_tree(label = "NUTS", ontology = crops) %>%
+  select(1:5) %>%
   kable()
-
-get_concept(table = tibble(label = "FRUIT"), ontology = crops) %>% 
-  make_tree(ontology = crops) %>% 
-  select(1:6) %>% 
+make_tree(label = "FRUIT", ontology = crops) %>%
+  select(1:5) %>%
   kable()
-
 # and finally a list of all external concepts
 get_concept(external = TRUE, ontology = crops) %>% 
   kable()

@@ -5,7 +5,7 @@
 #' @param new [`character(.)`][character]\cr the english external label(s) that
 #'   shall be mapped to labels that do already exist in the ontology.
 #' @param target [`data.frame(.)`][data.frame]\cr the already harmonised English
-#'   label(s) to which the external labels shall be mapped.
+#'   label(s) to which the external labels shall be mapped; derive with get_concept().
 #' @param match [`character(1)`][character]\cr the
 #'   \href{https://www.w3.org/TR/skos-reference/#mapping}{skos mapping property}
 #'   used to describe the link, possible values are \code{"close"},
@@ -14,8 +14,8 @@
 #'   identifying the source dataset of the new label.
 #' @param lut [`character(.)`][character]\cr in case the terms used for mapping
 #'   are from a look up table (i.e. a standardised set of terms with a
-#'   description), provide this table with column names 'label' and '
-#'   description' here.
+#'   description), provide this table with column names 'label' and
+#'   'description' here.
 #' @param certainty [`integerish(1)`][integer]\cr the certainty of the match.
 #'   Possible values are between 1 and 4, with meaning \itemize{\item 1 =
 #'   probably unreliable \item 2 = unclear, assigned according to a given
@@ -23,8 +23,6 @@
 #'   4 = original, harmonised term (can't be assigned by a user)}.
 #' @param type [`character(1)`][character]\cr whether the new labels are mapped
 #'   to a \code{"concept"}, or to a \code{"class"}.
-#' @param matchDir [`character(1)`][character]\cr the directory where to store
-#'   source-specific matching tables.
 #' @param verbose [`logical(1)`][logical]\cr whether or not to give detailed
 #'   information on the process of this function.
 #' @param beep [`integerish(1)`][integer]\cr Number specifying what sound to be
@@ -49,7 +47,7 @@
 #'                    license = "CC-BY-0",
 #'                    ontology = onto)
 #'
-#' onto <- get_concept(table = data.frame(label = mapping$old), ontology = onto) %>%
+#' onto <- get_concept(label = mapping$old, ontology = onto) %>%
 #'   new_mapping(new = mapping$new,
 #'               target = .,
 #'               match = mapping$type,
@@ -63,9 +61,9 @@
 #'   assertChoice assertIntegerish assertFileExists assertNames
 #' @importFrom tibble tibble
 #' @importFrom dplyr left_join filter pull mutate bind_rows arrange if_else
-#'   bind_cols full_join na_if across anti_join
+#'   bind_cols full_join na_if across anti_join right_join
 #' @importFrom tidyr unite pivot_wider
-#' @importFrom tidyselect all_of
+#' @importFrom tidyselect all_of where
 #' @importFrom stringr str_detect str_split str_replace
 #' @importFrom readr read_rds write_rds
 #' @importFrom methods new
@@ -75,7 +73,7 @@
 
 new_mapping <- function(new = NULL, target, source = NULL, lut = NULL,
                         match = NULL, certainty = NULL, type = "concept",
-                        ontology = NULL, matchDir = NULL, verbose = FALSE,
+                        ontology = NULL, verbose = FALSE,
                         beep = NULL){
 
   assertCharacter(x = new, all.missing = FALSE)
@@ -83,7 +81,6 @@ new_mapping <- function(new = NULL, target, source = NULL, lut = NULL,
   assertDataFrame(x = lut, null.ok = TRUE)
   assertIntegerish(x = certainty, lower = 1, upper = 4)
   assertChoice(x = type, choices = c("concept", "class"))
-  assertCharacter(x = matchDir, null.ok = TRUE)
   assertLogical(x = verbose, len = 1)
 
   if(inherits(x = ontology, what = "onto")){
@@ -161,24 +158,23 @@ new_mapping <- function(new = NULL, target, source = NULL, lut = NULL,
 
   # in case target doesn't contain labels, call the function edit_matches, to
   # assign the new terms to the already existing labels in the ontology
-  if(!"label" %in% colnames(target)){
-    assertNames(x = colnames(target), must.include = "class")
-
-    related <- edit_matches(concepts = tibble(label = new), attributes = target, source = source,
-                            ontology = ontology, matchDir = matchDir, verbose = verbose, beep = beep)
-    # concepts = tibble(label = new); attributes = target
-
-    temp <- related %>%
-      pivot_longer(cols = c(has_broader_match, has_close_match, has_exact_match, has_narrower_match),
-                   names_to = "match", values_to = "new") %>%
-      filter(!is.na(new)) %>%
-      mutate(certainty = certainty,
-             has_source = srcID,
-             match = str_replace(string = match, pattern = "has_", replacement = ""),
-             match = str_replace(string = match, pattern = "_match", replacement = "")) %>%
-      separate_rows(new, sep = " \\| ")
-
-  } else {
+  # if(!"label" %in% colnames(target)){
+  #   assertNames(x = colnames(target), must.include = c("class", "has_broader"))
+  #
+  #   related <- edit_matches(new = new, target = target, source = source,
+  #                           ontology = ontology, matchDir = matchDir, verbose = verbose, beep = beep)
+  #
+  #   temp <- related %>%
+  #     pivot_longer(cols = c(has_broader_match, has_close_match, has_exact_match, has_narrower_match),
+  #                  names_to = "match", values_to = "new") %>%
+  #     filter(!is.na(new)) %>%
+  #     mutate(certainty = certainty,
+  #            has_source = srcID,
+  #            match = str_replace(string = match, pattern = "has_", replacement = ""),
+  #            match = str_replace(string = match, pattern = "_match", replacement = "")) %>%
+  #     separate_rows(new, sep = " \\| ")
+  #
+  # } else {
     assertNames(x = names(target), must.include = targetCols)
     assertSubset(x = match, choices = c("close", "exact", "broader", "narrower"))
 
@@ -199,7 +195,7 @@ new_mapping <- function(new = NULL, target, source = NULL, lut = NULL,
       bind_cols(tibble(new = new, match = match, certainty = certainty, has_source = srcID)) %>%
       separate_rows(new, sep = " \\| ")
 
-  }
+  # }
 
   # identify concepts that are not yet in the external concepts
   extMps <- temp %>%
@@ -217,10 +213,11 @@ new_mapping <- function(new = NULL, target, source = NULL, lut = NULL,
 
   if(!is.null(lut) & !dim(extMps)[1] == 0){
     extMps <- extMps %>%
-      distinct(new, has_source) %>%
+      distinct(label, has_source) %>%
+      right_join(lut, by = "label") %>%
       mutate(newid = paste0(source, "_", row_number() + prevID),
-             has_broader = NA_character_) %>%
-      left_join(lut, by = c("new" = "label")) %>%
+             has_broader = NA_character_,
+             has_source = srcID) %>%
       select(id = newid, label, has_broader, has_source, description)
   } else {
     extMps <- extMps %>%
@@ -293,5 +290,3 @@ new_mapping <- function(new = NULL, target, source = NULL, lut = NULL,
   return(out)
 
 }
-
-utils::globalVariables("where")

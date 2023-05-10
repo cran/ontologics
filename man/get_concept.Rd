@@ -4,41 +4,18 @@
 \alias{get_concept}
 \title{Get a concept in an ontology}
 \usage{
-get_concept(
-  table = NULL,
-  ontology = NULL,
-  per_class = FALSE,
-  mappings = FALSE,
-  regex = FALSE,
-  external = FALSE
-)
+get_concept(..., external = FALSE, ontology = NULL)
 }
 \arguments{
-\item{table}{\code{\link[=character]{character(1)}}\cr a table containing all columns (a
-subset of "id", "class", "label", "has_broader" and "has_source") of the
-ontology that shall be filter by the values in those columns.}
-
-\item{ontology}{\code{\link[=list]{ontology(1)}}\cr either a path where the ontology is
-stored, or an already loaded ontology.}
-
-\item{per_class}{\code{\link[=logical]{logical(1)}}\cr whether ot not to flatten the
-ontology before matching \code{table} with the ontology, whereby
-\code{table} would contain columns of the classes in the ontology. This can
-be useful when concepts are unique only within their parent concepts, so
-that unique identification is only possible when they are matched together.}
-
-\item{mappings}{\code{\link[=logical]{logical(1)}}\cr whether or not to provide a table
-that includes mappings. In this case, only unique items of the concepts in
-\code{table} are included in the output table.}
-
-\item{regex}{\code{\link[=logical]{logical(1)}}\cr if \code{regex = TRUE}, the columns
-defined in \code{table} are filtered by \code{\link[stringr]{str_detect}}
-on the column values (if you define several, they are combined with an AND
-operator), otherwise a \code{\link[dplyr]{left_join}} on the ontology is
-carried out.}
+\item{...}{combination of column name and value to filter that column by. The
+value to filter by can be provided as regular expression, if \code{regex =
+  TRUE}.}
 
 \item{external}{\code{\link[=logical]{logical(1)}}\cr whether or not to return merely
 the table of external concepts.}
+
+\item{ontology}{\code{\link[=list]{ontology(1)}}\cr either a path where the ontology is
+stored, or an already loaded ontology.}
 }
 \value{
 A table of a subset of the ontology according to the values in
@@ -52,13 +29,16 @@ ontoDir <- system.file("extdata", "crops.rds", package = "ontologics")
 onto <- load_ontology(path = ontoDir)
 
 # exact matches from a loaded ontology ...
-get_concept(table = data.frame(label = "FODDER CROPS"), ontology = onto)
+get_concept(label = "FODDER CROPS", ontology = onto)
 
-# ... or one stored on the harddisc, with mappings (none available here)
-get_concept(table = data.frame(label = "FODDER CROPS"), ontology = ontoDir,
-            mappings = TRUE)
+# ... or a path
+get_concept(label = c("FODDER CROPS", "CEREALS"), ontology = ontoDir)
+
+# ignore querries that would not be valid in filter()
+get_concept(label != 'Bioenergy woody' & has_broader == '.01', ontology = onto)
 
 # extract concepts based on regular expressions
-get_concept(table = data.frame(label = "crop", id = ".03$"),
-            regex = TRUE, ontology = ontoDir)
+library(stringr)
+get_concept(str_detect(label, "crop") & str_detect(id, ".03$"), ontology = ontoDir)
+
 }

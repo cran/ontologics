@@ -13,7 +13,6 @@ new_mapping(
   certainty = NULL,
   type = "concept",
   ontology = NULL,
-  matchDir = NULL,
   verbose = FALSE,
   beep = NULL
 )
@@ -23,15 +22,15 @@ new_mapping(
 shall be mapped to labels that do already exist in the ontology.}
 
 \item{target}{\code{\link[=data.frame]{data.frame(.)}}\cr the already harmonised English
-label(s) to which the external labels shall be mapped.}
+label(s) to which the external labels shall be mapped; derive with get_concept().}
 
 \item{source}{\code{\link[=character]{character(1)}}\cr any character uniquely
 identifying the source dataset of the new label.}
 
 \item{lut}{\code{\link[=character]{character(.)}}\cr in case the terms used for mapping
 are from a look up table (i.e. a standardised set of terms with a
-description), provide this table with column names 'label' and '
-description' here.}
+description), provide this table with column names 'label' and
+'description' here.}
 
 \item{match}{\code{\link[=character]{character(1)}}\cr the
 \href{https://www.w3.org/TR/skos-reference/#mapping}{skos mapping property}
@@ -49,9 +48,6 @@ to a \code{"concept"}, or to a \code{"class"}.}
 
 \item{ontology}{\code{\link[=list]{ontology(1)}}\cr either a path where the ontology is
 stored, or an already loaded ontology.}
-
-\item{matchDir}{\code{\link[=character]{character(1)}}\cr the directory where to store
-source-specific matching tables.}
 
 \item{verbose}{\code{\link[=logical]{logical(1)}}\cr whether or not to give detailed
 information on the process of this function.}
@@ -85,7 +81,7 @@ onto <- new_source(name = "externalDataset",
                    license = "CC-BY-0",
                    ontology = onto)
 
-onto <- get_concept(table = data.frame(label = mapping$old), ontology = onto) \%>\%
+onto <- get_concept(label = mapping$old, ontology = onto) \%>\%
   new_mapping(new = mapping$new,
               target = .,
               match = mapping$type,

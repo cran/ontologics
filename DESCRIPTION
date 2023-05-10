@@ -1,6 +1,6 @@
 Package: ontologics
 Title: Code-Logics to Handle Ontologies
-Version: 0.6.5
+Version: 0.7.0
 Authors@R: c(
     person("Steffen", "Ehrmann", 
            role = c("aut", "cre"), 
@@ -32,10 +32,10 @@ Imports: checkmate, dplyr, httr, magrittr, methods, purrr, readr,
 Suggests: knitr, rmarkdown
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2023-01-31 11:53:02 UTC; steff
+Packaged: 2023-05-10 08:55:39 UTC; se87kuhe
 Author: Steffen Ehrmann [aut, cre] (<https://orcid.org/0000-0002-2958-0796>),
   Arne Rümmler [aut, ctb] (<https://orcid.org/0000-0001-8637-9071>),
   Carsten Meyer [ctb] (<https://orcid.org/0000-0003-3927-5856>)
 Maintainer: Steffen Ehrmann <steffen.ehrmann@posteo.de>
 Repository: CRAN
-Date/Publication: 2023-01-31 13:10:08 UTC
+Date/Publication: 2023-05-10 09:20:05 UTC

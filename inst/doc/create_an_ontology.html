@@ -367,10 +367,10 @@ ontology</a> so that it’s interoperable with the semantic web.</p>
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     ∟ class   53   Classes of crop or livestock commodi...</span></span>
 <span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      ∟ crop    0   Crop or livestock commodities</span></span>
 <span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   concepts: 73 </span></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     -&gt; &#39;CEREALS&#39; (10), &#39;FRUIT&#39; (8), &#39;VEGETABLES&#39; (6), &#39;UNGULATES&#39; (5), &#39;BIOENERGY CROPS&#39; (4), ...</span></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     -&gt; &#39;Bioenergy herbaceous&#39; (20), &#39;Barley&#39; (20), &#39;Fibre crops&#39; (20), &#39;Flower herbs&#39; (20), &#39;Grass crops&#39; (20), ...</span></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     -&gt;</span></span></code></pre></div>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   top concepts: 73 </span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     -&gt; group: &#39;CEREALS&#39; (10), &#39;FRUIT&#39; (8), &#39;VEGETABLES&#39; (6), &#39;UNGULATES&#39; (5), &#39;BIOENERGY CROPS&#39; (4), ...</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     -&gt; class: &#39;Bioenergy herbaceous&#39; (20), &#39;Barley&#39; (20), &#39;Fibre crops&#39; (20), &#39;Flower herbs&#39; (20), &#39;Grass crops&#39; (20), ...</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     -&gt; crop:</span></span></code></pre></div>
 <p>The <code>onto</code> class is an S3 class with the 3 slots
 <code>@sources</code>, <code>@classes</code> and <code>@concepts</code>,
 each of which are reflected by an entry in the show-method. Often the
@@ -399,7 +399,7 @@ linking also this ontology to other <em>linked open data</em>.</p>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>                       <span class="at">path =</span> <span class="fu">tempdir</span>(), </span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>                       <span class="at">code =</span> <span class="st">&quot;.xx&quot;</span>,</span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>                       <span class="at">description =</span> <span class="st">&quot;showcase of the ontologics R-package&quot;</span>, </span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>                       <span class="at">homepage =</span> <span class="st">&quot;https://www.idiv.de/luckinet&quot;</span>, </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>                       <span class="at">homepage =</span> <span class="st">&quot;https://github.com/luckinet/ontologics&quot;</span>, </span>
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>                       <span class="at">license =</span> <span class="st">&quot;CC-BY-4.0&quot;</span>)</span>
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>lulc</span>
@@ -408,7 +408,7 @@ linking also this ontology to other <em>linked open data</em>.</p>
 <span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   classes : 0 </span></span>
 <span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   concepts: 0</span></span></code></pre></div>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   top concepts: 0</span></span></code></pre></div>
 <p>These information are stored in the <code>@sources</code> slot, just
 like any other external data source. It is recommended to always set the
 <code>code</code> for building IDs with a leading symbol that can’t be
@@ -419,13 +419,13 @@ this transformation without asking or informing the author.</p>
 <table>
 <colgroup>
 <col width="2%" />
-<col width="9%" />
-<col width="6%" />
-<col width="9%" />
-<col width="32%" />
-<col width="25%" />
 <col width="8%" />
-<col width="5%" />
+<col width="6%" />
+<col width="8%" />
+<col width="29%" />
+<col width="31%" />
+<col width="8%" />
+<col width="4%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -444,9 +444,9 @@ this transformation without asking or informing the author.</p>
 <td align="left">1</td>
 <td align="left">harmonised</td>
 <td align="left">0.0.1</td>
-<td align="left">2023-01-31</td>
+<td align="left">2023-05-10</td>
 <td align="left">showcase of the ontologics R-package</td>
-<td align="left"><a href="https://www.idiv.de/luckinet" class="uri">https://www.idiv.de/luckinet</a></td>
+<td align="left"><a href="https://github.com/luckinet/ontologics" class="uri">https://github.com/luckinet/ontologics</a></td>
 <td align="left">CC-BY-4.0</td>
 <td align="left"></td>
 </tr>
@@ -469,7 +469,7 @@ the same label.</p>
 <span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>lulc <span class="ot">&lt;-</span> <span class="fu">new_class</span>(</span>
 <span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">new =</span> <span class="st">&quot;land-use&quot;</span>, </span>
 <span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">target =</span> <span class="st">&quot;landcover&quot;</span>, </span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">description =</span> <span class="st">&quot;A good definition of land-use&quot;</span>,</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">description =</span> <span class="st">&quot;A good definition of land use&quot;</span>,</span>
 <span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">ontology =</span> lulc)</span>
 <span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co"># the class IDs are derived from the code that was previously specified </span></span>
@@ -505,7 +505,7 @@ the same label.</p>
 <tr class="even">
 <td align="left">.xx.xx</td>
 <td align="left">land-use</td>
-<td align="left">A good definition of land-use</td>
+<td align="left">A good definition of land use</td>
 <td align="left">landcover</td>
 <td align="left">NA</td>
 <td align="left">NA</td>
@@ -689,14 +689,19 @@ also a second level of concepts that depend on the first level.</p>
 <span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  )</span>
 <span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>lulc <span class="ot">&lt;-</span> <span class="fu">new_concept</span>(</span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">new =</span> lu<span class="sc">$</span>concept,</span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">broader =</span> <span class="fu">get_concept</span>(<span class="at">table =</span> lu <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="at">label =</span> broader), <span class="at">ontology =</span> lulc),</span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">class =</span> <span class="st">&quot;land-use&quot;</span>,</span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">ontology =</span> lulc</span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(lulc<span class="sc">@</span>concepts<span class="sc">$</span>harmonised[, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>])</span></code></pre></div>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>lulc <span class="ot">&lt;-</span> <span class="fu">get_concept</span>(<span class="at">label =</span> lu<span class="sc">$</span>broader, <span class="at">ontology =</span> lulc) <span class="sc">%&gt;%</span> </span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(lu <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="at">label =</span> broader), .) <span class="sc">%&gt;%</span> </span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">new_concept</span>(</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">new =</span> lu<span class="sc">$</span>concept,</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">broader =</span> .,</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">class =</span> <span class="st">&quot;land-use&quot;</span>,</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">ontology =</span> lulc</span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Joining with `by = join_by(label)`</span></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(lulc<span class="sc">@</span>concepts<span class="sc">$</span>harmonised[, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>])</span></code></pre></div>
 <table>
 <colgroup>
 <col width="8%" />

@@ -2,13 +2,12 @@
 #'
 #' Allows the user to match concepts with an already existing ontology, without
 #' actually writing into the ontology, but instead storing the resulting
-#' matching table as csv. This function is used in the function
-#' \code{\link{new_mapping}} and is not primarily intended for use on its own.
-#' @param concepts [`data.frame(.)`][data.frame]\cr the new concepts that shall
-#'   be manually matched.
-#' @param attributes [`data.frame(.)`][data.frame]\cr the attributes of new
-#'   concepts that help to match new and target concepts manually (must contain
-#'   at least the column 'class').
+#' matching table as csv.
+#' @param new [`data.frame(.)`][data.frame]\cr the new concepts that shall be
+#'   manually matched.
+#' @param target [`data.frame(.)`][data.frame]\cr the attributes, in terms of
+#'   columns in the ontology, of new concepts that help to match new and target
+#'   concepts manually.
 #' @param source [`character(1)`][character]\cr any character uniquely
 #'   identifying the source dataset of the new concepts.
 #' @param ontology [`ontology(1)`][list]\cr either a path where the ontology is
@@ -49,13 +48,12 @@
 #' @importFrom fuzzyjoin stringdist_left_join
 #' @export
 
-edit_matches <- function(concepts, attributes = NULL, source = NULL,
+edit_matches <- function(new, target = NULL, source = NULL,
                          ontology = NULL, matchDir = NULL, verbose = TRUE,
                          beep = NULL){
 
-  assertDataFrame(x = concepts, min.cols = 1)
-  assertNames(x = names(concepts), must.include = c("label"))
-  assertDataFrame(x = attributes, nrows = nrow(concepts))
+  assertCharacter(x = new)
+  assertNames(x = names(target), must.include = c("class", "has_broader"))
   assertCharacter(x = source, len = 1, any.missing = FALSE)
 
   intPaths <- getOption(x = "adb_path")
@@ -72,8 +70,9 @@ edit_matches <- function(concepts, attributes = NULL, source = NULL,
     ontology <- load_ontology(path = ontoPath)
   }
 
+  # get the classes within which to search
   filterClasses <- ontology@classes$harmonised %>%
-    filter(label %in% attributes$class)
+    filter(label %in% target$class)
   filterClassLevel <- length(str_split(string = filterClasses$id, pattern = "[.]")[[1]])
   if(dim(filterClasses)[1] == 0){
     stop("no classes are matched in the ontology.")
@@ -85,25 +84,21 @@ edit_matches <- function(concepts, attributes = NULL, source = NULL,
   filterClasses <- filterClasses %>%
     pull(label) %>%
     unique()
-  attributes <- attributes %>%
+
+  #
+  target <- target %>%
     mutate(lvl = length(str_split(has_broader, "[.]")[[1]]))
-  if(all(attributes$lvl < filterClassLevel-1)){
-    parentFilter <- unique(attributes$has_broader)
+
+  if(all(target$lvl < filterClassLevel-1)){
+    parentFilter <- unique(target$has_broader)
     withBroader <- NULL
-    attributes <- attributes %>%
-      select(-class, -has_broader, -lvl)
   } else {
     parentFilter <- NULL
     withBroader <- "has_broader"
-    attributes <- attributes %>%
-      select(-class, -lvl)
   }
 
-  allAttribs <- concepts %>%
-    bind_cols(attributes)
-  selectedCols <- which(colnames(allAttribs) %in% c("id", "has_broader", "source_id", "class", "label", "source_label", "external_label"))
-
-  temp <- get_concept(table = allAttribs[,selectedCols], ontology = ontology, mappings = TRUE)
+  temp <- get_concept(label = new, class = target$class, has_broader = target$has_broader, ontology = ontology) %>%
+    left_join(tibble(label = new, has_broader = target$has_broader), ., by = c("label", "has_broader"))
 
   # determine previous matches
   if(testFileExists(paste0(matchDir, sourceFile))){
@@ -111,7 +106,7 @@ edit_matches <- function(concepts, attributes = NULL, source = NULL,
     prevMatches <- read_csv(paste0(matchDir, sourceFile), col_types = cols(.default = "c"))
 
     prevMatchLabels <- prevMatches %>%
-      filter(class %in% tail(filterClasses, 1)) %>%
+      filter(class %in% filterClasses) %>%
       pivot_longer(cols = c(has_broader_match, has_close_match, has_exact_match, has_narrower_match), values_to = "labels") %>%
       filter(!is.na(labels)) %>%
       distinct(labels) %>%
@@ -159,7 +154,7 @@ edit_matches <- function(concepts, attributes = NULL, source = NULL,
            match = if_else(is.na(match), if_else(!is.na(id), "has_close_match", "sort_in"), match)) %>%
     pivot_wider(id_cols = c(harmLab, class, id, has_broader, description), names_from = match,
                 values_from = label, values_fn = ~paste0(na.omit(.x), collapse = " | ")) %>%
-    mutate(across(where(is.character), function(x) na_if(x, ""))) %>%
+    mutate(across(where(is.character), ~na_if(x = ., y = ""))) %>%
     filter(harmLab != "ignore") %>%
     rename(label = harmLab)
 
@@ -193,21 +188,25 @@ edit_matches <- function(concepts, attributes = NULL, source = NULL,
   if(dim(missingConcepts)[1] != 0){
 
     if(!is.null(parentFilter)){
-      toRelate <- make_tree(get_concept(table = tibble(id = parentFilter), ontology = ontology),
-                            ontology = ontology)
+      if(!all(is.na(parentFilter))){
+        toRelate <- make_tree(id = parentFilter, ontology = ontology)
+      } else {
+        toRelate <- ontology@concepts$harmonised
+      }
     } else {
       toRelate <- ontology@concepts$harmonised
     }
     relate <- toRelate %>%
       select(id, label, class, has_broader) %>%
+      filter(class %in% filterClasses) %>%
       left_join(inclConcepts, by = c("id", "label", "class", "has_broader")) %>%
-      filter(!is.na(class)) %>%
-      filter(class %in% filterClasses)
+      filter(!is.na(class))
 
     toJoin <- relate %>%
       rename(label_harm = label) %>%
       mutate(label = tolower(label_harm)) %>%
-      filter(!is.na(label_harm) & class == tail(filterClasses, 1)) %>%
+      # filter(!is.na(label_harm) & class == tail(filterClasses, 1)) %>%
+      filter(!is.na(label_harm)) %>%
       select(-has_broader, -has_broader_match, -has_close_match, -has_exact_match, -has_narrower_match)
 
     joined <- missingConcepts %>%
@@ -235,41 +234,49 @@ edit_matches <- function(concepts, attributes = NULL, source = NULL,
       }
 
       joined <- joined %>%
-        group_by(label_new, has_broader) %>%
+        group_by(label_new, id, class, has_broader) %>%
         summarise(across(starts_with("dist_"), ~ paste0(na.omit(unique(.x)), collapse = " | "))) %>%
         mutate(across(where(is.character), function(x) na_if(x, ""))) %>%
         ungroup() %>%
-        select(label = label_new, has_broader, has_0_differences = dist_0, has_1_difference = dist_1, has_2_differences = dist_2)
+        select(label = label_new, id, class, has_broader, has_0_differences = dist_0, has_1_difference = dist_1, has_2_differences = dist_2)
 
       hits <- joined %>%
         filter(!is.na(has_0_differences)) %>%
-        mutate(class = tail(filterClasses, 1),
+        mutate(#class = tail(filterClasses, 1),
                has_new_close_match = label,
                label = has_0_differences) %>%
-        select(label, all_of(withBroader), class, has_new_close_match)
+        select(label, id, all_of(withBroader), class, has_new_close_match)
 
       numbers <- relate %>%
         group_by(label) %>%
         summarise(n = n())
 
       relate <- relate %>%
-        left_join(hits, by = c("label", "class", withBroader)) %>%
+        left_join(hits, by = c("id", "label", "class", withBroader)) %>%
         left_join(numbers, by = "label") %>%
         mutate(has_new_close_match = if_else(n > 1, NA_character_, has_new_close_match)) %>%
+        mutate(has_new_close_match = if_else(str_detect(has_close_match, has_new_close_match), NA_character_, has_new_close_match)) %>%
         unite(col = "has_close_match", has_close_match, has_new_close_match, sep = " | ", na.rm = TRUE) %>%
         mutate(across(where(is.character), function(x) na_if(x, ""))) %>%
         select(-n)
 
       missingJoined <- joined %>%
         filter(is.na(has_0_differences))
+      stillMissing <- joined %>%
+        select(-has_broader, -has_0_differences, -id, -class) %>%
+        group_by(label) %>%
+        summarise(across(starts_with("has_"), ~ paste0(na.omit(unique(.x)), collapse = " | "))) %>%
+        mutate(across(where(is.character), function(x) na_if(x, ""))) %>%
+        ungroup()
+
       missingConcepts <- missingConcepts %>%
         filter(label %in% missingJoined$label) %>%
-        left_join(joined %>% select(-has_broader, -has_0_differences), by = "label")
+        left_join(stillMissing, by = "label")
 
     }
 
     sortIn <- missingConcepts %>%
-      left_join(concepts, by = "label") %>%
+      left_join(tibble(label = new), by = "label") %>%
       mutate(sort_in = label,
              label = NA_character_,
              class = NA_character_) %>%
@@ -316,21 +323,22 @@ edit_matches <- function(concepts, attributes = NULL, source = NULL,
       assertNames(x = names(related), must.include = c("sort_in", "has_broader", "id", "label", "class", "description", "has_broader_match", "has_close_match", "has_exact_match", "has_narrower_match"))
       related <- related %>%
         select(-sort_in) %>%
-        filter(!is.na(id))
+        filter(!is.na(id)) %>%
+        select(-any_of(c("has_0_differences", "has_1_difference", "has_2_differences")))
 
-      if("dist" %in% names(joined)){
-        if(!all(is.na(joined$dist))){
-          related <- related %>%
-            select(-any_of("has_0_differences", "has_1_difference", "has_2_differences"))
-        }
-      }
+      # if("dist" %in% names(joined)){
+      #   if(!all(is.na(joined$dist))){
+      #     related <- related %>%
+      #       select(-any_of("has_0_differences", "has_1_difference", "has_2_differences"))
+      #   }
+      # }
 
       if(dim(related)[1] == 0){
         related <- NULL
       }
 
     } else {
-      related <- prevMatches
+      related <- relate
     }
 
   } else {
