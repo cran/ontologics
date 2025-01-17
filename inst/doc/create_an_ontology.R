@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -19,12 +19,12 @@ crops   # ... has a pretty show-method
 lulc <- start_ontology(name = "land_surface_properties",
                        version = "0.0.1",
                        path = tempdir(), 
-                       code = ".xx",
+                       code = ".xx", 
                        description = "showcase of the ontologics R-package", 
                        homepage = "https://github.com/luckinet/ontologics", 
                        license = "CC-BY-4.0")
 
-lulc
+lulc # nothing included so far
 
 ## -----------------------------------------------------------------------------
 kable(lulc@sources)
@@ -38,7 +38,7 @@ lulc <- new_class(
   ontology = lulc)
 
 lulc <- new_class(
-    new = "land-use", 
+    new = "land use", 
     target = "landcover", 
     description = "A good definition of land use",
     ontology = lulc)
@@ -88,7 +88,7 @@ lulc <- get_concept(label = lu$broader, ontology = lulc) %>%
   new_concept(
     new = lu$concept,
     broader = .,
-    class = "land-use",
+    class = "land use",
     ontology = lulc
   )
 

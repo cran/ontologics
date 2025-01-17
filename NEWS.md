@@ -1,3 +1,18 @@
+# ontologics 0.7.4
+
+- fix NA in plot method of `onto`.
+
+# ontologics 0.7.3
+
+- include information about previous matches in the "description" column in matching tables, to assist in finding the correct matches, based on previous information.
+
+# ontologics 0.7.2
+
+- change automatically set matches to "exact" in `edit_matches()`.
+- fix a bug when mapping external concepts that had already previously been mapped.
+
+# ontologics 0.7.1
+
 # ontologics 0.7.0 - simpler interface
 
 - simplify `get_concept()`. Search parameters are now not provided via a table anymore, but as a combination of column name and value to search for in that column. They can also be provided as a string that represents a query that would be used in `dplyr::filter()`, where several search conditions can be combined arbitrarily.

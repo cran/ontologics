@@ -6,21 +6,23 @@
 \usage{
 edit_matches(
   new,
-  target = NULL,
+  topLevel,
   source = NULL,
   ontology = NULL,
   matchDir = NULL,
+  stringdist = TRUE,
   verbose = TRUE,
   beep = NULL
 )
 }
 \arguments{
 \item{new}{\code{\link[=data.frame]{data.frame(.)}}\cr the new concepts that shall be
-manually matched.}
+manually matched, includes "label", "class" and "has_broader" columns.}
 
-\item{target}{\code{\link[=data.frame]{data.frame(.)}}\cr the attributes, in terms of
-columns in the ontology, of new concepts that help to match new and target
-concepts manually.}
+\item{topLevel}{\code{\link[=logical]{logical(1)}}\cr whether or not the new concepts
+are at the highest level only, i.e., have to be matched without context, or
+whether they are contain columns that must be matched within parent
+columns.}
 
 \item{source}{\code{\link[=character]{character(1)}}\cr any character uniquely
 identifying the source dataset of the new concepts.}
@@ -30,6 +32,10 @@ stored, or an already loaded ontology.}
 
 \item{matchDir}{\code{\link[=character]{character(1)}}\cr the directory where to store
 source-specific matching tables.}
+
+\item{stringdist}{\code{\link[=logical]{logical(1)}}\cr whether or not to use string
+distance to find matches (should not be used for large datasets/when a
+memory error is shown).}
 
 \item{verbose}{\code{\link[=logical]{logical(1)}}\cr whether or not to give detailed
 information on the process of this function.}

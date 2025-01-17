@@ -5,42 +5,44 @@
 
 <!-- badges: start -->
 
-[![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/ontologics)](https://cran.r-project.org/package=ontologics)
+[![CRAN
+status](http://www.r-pkg.org/badges/version/ontologics)](https://cran.r-project.org/package=ontologics)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8043597.svg)](https://doi.org/10.5281/zenodo.8043597)
+
 [![R-CMD-check](https://github.com/luckinet/ontologics/workflows/R-CMD-check/badge.svg)](https://github.com/luckinet/ontologics/actions)
-[![Coverage
-Status](https://codecov.io/gh/luckinet/ontologics/branch/master/graph/badge.svg)](https://app.codecov.io/github/luckinet/ontologics?branch=master)
-[![](http://cranlogs.r-pkg.org/badges/grand-total/ontologics)](https://cran.r-project.org/package=geometr)
+[![codecov](https://app.codecov.io/gh/luckinet/ontologics/branch/master/graph/badge.svg?token=hjppymcGr3)](https://app.codecov.io/gh/luckinet/ontologics)
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-<!-- badges: end -->
+
+[![](http://cranlogs.r-pkg.org/badges/grand-total/ontologics)](https://cran.r-project.org/package=ontologics)
 
 ## Overview
 
 The `ontologics` package provides tools to build and work with an
 ontology of [linked (open)
 data](https://en.wikipedia.org/wiki/Linked_data) in a tidy workflow. In
-the current workflow the data are only available at the three star level
-in comma-separated values tables, or actually an R-optimized \*.rds file
-of such a table.
+the current workflow, the data are only available at the three-star
+level in comma-separated values tables or an R-optimized \*.rds file of
+such a table.
 
 The type of ontology is inspired by the [FAO
-caliper](https://www.fao.org/statistics/caliper/web/) platform and makes
-use of the Simple Knowledge Organisation System
+caliper](https://www.fao.org/statistics/caliper/web/) platform and uses
+the Simple Knowledge Organisation System
 ([SKOS](https://www.w3.org/TR/skos-reference/)).
 
-An ontology is any data structure that stores concept of any knowledge
-field in a linked way. It is typically built on a set of
+An ontology is any data structure that stores the concept of any
+knowledge field in a linked way. It is typically built on a set of
 standardized/harmonized terms that have a clear definition and
 potentially some attributes. According to the SKOS, concepts can have
 semantic relations or can be mapped to one another. Semantic relations
-describe how *harmonized concepts* **relate** to one another and
+describe how *harmonized concepts* **relate** to one another, and
 mappings describe which concepts *from different vocabularies* should be
-**linked** to one another.
+**linked**.
 
-The key tasks, beyond creating a formally valid ontology, is
-*extracting* concepts and their relation to other concepts and *mapping*
-new concepts to an existing ontology to capture and set potentially
-deviating definitions into relation.
+The key tasks beyond creating a formally valid ontology are *extracting*
+concepts and their relation to other concepts and *mapping* new concepts
+to an existing ontology to capture and set potentially deviating
+definitions into relation.
 
 ## Installation
 
